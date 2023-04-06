@@ -2,10 +2,11 @@ package curl
 
 import (
 	"fmt"
-	"github.com/cloudwego/hertz/cmd/hz/util"
-	"github.com/cloudwego/hertz/pkg/protocol"
 	"sort"
 	"strings"
+
+	"github.com/cloudwego/hertz/cmd/hz/util"
+	"github.com/cloudwego/hertz/pkg/protocol"
 )
 
 // Command contains exec.Command compatible slice + helpers
@@ -37,6 +38,10 @@ func parse(req *protocol.Request, byte2str func(in []byte) string) *Command {
 
 	command.append("curl")
 
+	if byte2str(req.URI().Scheme()) == "https" {
+		command.append("-k")
+	}
+
 	command.append("-X", bashEscape(byte2str(req.Method())))
 
 	body := req.Body()
@@ -57,6 +62,8 @@ func parse(req *protocol.Request, byte2str func(in []byte) string) *Command {
 	}
 
 	command.append(bashEscape(req.URI().String()))
+
+	command.append("--compressed")
 
 	return &command
 }

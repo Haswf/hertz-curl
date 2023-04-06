@@ -2,13 +2,15 @@ package curl
 
 import (
 	"fmt"
+	"math/rand"
+	"testing"
+
 	"github.com/cloudwego/hertz/cmd/hz/util"
 	"github.com/cloudwego/hertz/pkg/common/adaptor"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	"math/rand"
+
 	"moul.io/http2curl"
-	"testing"
 )
 
 var bodyLength = []struct {
@@ -25,22 +27,28 @@ var bodyLength = []struct {
 
 var requestToCurlFunc = []struct {
 	name string
-	f    func(req *protocol.Request) string
+	f    func(req *protocol.Request) (string, error)
 }{
 	{
 		name: "hertz-curl",
-		f: func(req *protocol.Request) string {
+		f: func(req *protocol.Request) (string, error) {
 			cmd := GetCurlCommand(req)
-			return cmd.String()
+			return cmd.String(), nil
 		},
 	},
 	{
 		name: "adaptor and http2curl",
-		f: func(req *protocol.Request) string {
-			r, _ := adaptor.GetCompatRequest(req)
+		f: func(req *protocol.Request) (string, error) {
+			r, err := adaptor.GetCompatRequest(req)
+			if err != nil {
+				return "", err
+			}
 			// log curl command
-			cmd, _ := http2curl.GetCurlCommand(r)
-			return cmd.String()
+			cmd, err := http2curl.GetCurlCommand(r)
+			if err != nil {
+				return "", err
+			}
+			return cmd.String(), nil
 		},
 	},
 }
@@ -75,13 +83,11 @@ func BenchmarkHertzRequest2Curl(b *testing.B) {
 				req.SetRequestURI("https://www.cloudwego.io/zh/")
 
 				for i := 0; i < b.N; i++ {
-					impl.f(req)
+					_, _ = impl.f(req)
 				}
 			})
 		}
-
 	}
-
 }
 
 func BenchmarkByte2Str(b *testing.B) {
@@ -100,11 +106,8 @@ func BenchmarkByte2Str(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					cmd := parse(req, f.impl)
 					_ = cmd.String()
-
 				}
 			})
 		}
-
 	}
-
 }
