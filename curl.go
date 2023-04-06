@@ -6,8 +6,11 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/cmd/hz/util"
+
 	"github.com/cloudwego/hertz/pkg/protocol"
 )
+
+var ErrRequestURINotSet = fmt.Errorf("requestURI is not set")
 
 // Command contains exec.Command compatible slice + helpers
 type Command struct {
@@ -28,32 +31,33 @@ func bashEscape(str string) string {
 	return `'` + strings.Replace(str, `'`, `'\''`, -1) + `'`
 }
 
-func GetCurlCommand(req *protocol.Request) *Command {
-	return parse(req, util.Bytes2Str)
-}
+// GetCurlCommand returns a CurlCommand corresponding to an *protocol.Request
+func GetCurlCommand(req *protocol.Request) (*Command, error) {
+	fmt.Println(req.URI().String())
+	if req.URI().String() == "http:///" {
+		return nil, ErrRequestURINotSet
+	}
 
-// parse returns a CurlCommand corresponding to an  *protocol.Request
-func parse(req *protocol.Request, byte2str func(in []byte) string) *Command {
 	command := Command{}
 
 	command.append("curl")
 
-	if byte2str(req.URI().Scheme()) == "https" {
+	if util.Bytes2Str(req.URI().Scheme()) == "https" {
 		command.append("-k")
 	}
 
-	command.append("-X", bashEscape(byte2str(req.Method())))
+	command.append("-X", bashEscape(util.Bytes2Str(req.Method())))
 
 	body := req.Body()
 	if len(body) > 0 {
-		bodyEscaped := bashEscape(byte2str(body))
+		bodyEscaped := bashEscape(util.Bytes2Str(body))
 		command.append("-d", bodyEscaped)
 	}
 
 	var keys []string
 
 	req.Header.VisitAll(func(key, value []byte) {
-		keys = append(keys, byte2str(key))
+		keys = append(keys, util.Bytes2Str(key))
 	})
 	sort.Strings(keys)
 
@@ -65,5 +69,5 @@ func parse(req *protocol.Request, byte2str func(in []byte) string) *Command {
 
 	command.append("--compressed")
 
-	return &command
+	return &command, nil
 }

@@ -17,10 +17,20 @@ import (
 func TestGetCurlCommand(t *testing.T) {
 	uri := "http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu"
 	tests := []struct {
-		Name    string
-		Request func() *protocol.Request
-		Want    string
+		Name      string
+		Request   func() *protocol.Request
+		Want      string
+		WantError bool
 	}{
+		{
+			Name: "request uri is not set",
+			Request: func() *protocol.Request {
+				req := &protocol.Request{}
+				req.SetMethod(consts.MethodPost)
+				return req
+			},
+			WantError: true,
+		},
 		{
 			Name: "get request",
 			Request: func() *protocol.Request {
@@ -130,8 +140,12 @@ func TestGetCurlCommand(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		cmd := GetCurlCommand(tt.Request())
-		if cmd.String() != tt.Want {
+		cmd, err := GetCurlCommand(tt.Request())
+		if (err != nil) != tt.WantError {
+			t.Fatalf("%s error: want %t, got %t", tt.Name, tt.WantError, err != nil)
+			return
+		}
+		if cmd != nil && cmd.String() != tt.Want {
 			t.Fatalf("%s error: want %s, got %s", tt.Name, tt.Want, cmd.String())
 		}
 	}
@@ -143,7 +157,7 @@ func TestGetCurlCommand_ServerAndClientSide(t *testing.T) {
 	// run hertz server in a new goroutine as h.Spin blocks.
 	go func() {
 		h.GET("/curl", func(ctx context.Context, c *app.RequestContext) {
-			serverCurl = GetCurlCommand(&c.Request)
+			serverCurl, _ = GetCurlCommand(&c.Request)
 			c.JSON(consts.StatusOK, nil)
 		})
 		h.Spin()
@@ -174,7 +188,7 @@ func TestGetCurlCommand_ServerAndClientSide(t *testing.T) {
 	if err != nil {
 		return
 	}
-	clientCurl := GetCurlCommand(req)
+	clientCurl, _ := GetCurlCommand(req)
 	want := `curl -X 'GET' -H 'Host: 127.0.0.1:8888' -H 'User-Agent: hertz' 'http://127.0.0.1:8888/curl' --compressed`
 	if serverCurl.String() != want {
 		t.Fatalf("server curl error: want %s, got %s", want, serverCurl.String())
