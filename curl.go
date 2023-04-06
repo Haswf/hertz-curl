@@ -1,6 +1,7 @@
 package curl
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,7 +11,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 )
 
-var ErrRequestURINotSet = fmt.Errorf("requestURI is not set")
+var ErrRequestURINotSet = errors.New("request uri is not set")
 
 // Command contains exec.Command compatible slice + helpers
 type Command struct {
