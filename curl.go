@@ -13,7 +13,7 @@ type Command struct {
 	slice []string
 }
 
-// append appends a string to the CurlCommand
+// Append appends a string to the CurlCommand
 func (c *Command) append(newSlice ...string) {
 	c.slice = append(c.slice, newSlice...)
 }
@@ -31,7 +31,7 @@ func GetCurlCommand(req *protocol.Request) *Command {
 	return parse(req, util.Bytes2Str)
 }
 
-// GetCurlCommand returns a CurlCommand corresponding to an http.Request
+// parse returns a CurlCommand corresponding to an  *protocol.Request
 func parse(req *protocol.Request, byte2str func(in []byte) string) *Command {
 	command := Command{}
 

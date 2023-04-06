@@ -23,6 +23,28 @@ var bodyLength = []struct {
 	{input: 65536},
 }
 
+var requestToCurlFunc = []struct {
+	name string
+	f    func(req *protocol.Request) string
+}{
+	{
+		name: "hertz-curl",
+		f: func(req *protocol.Request) string {
+			cmd := GetCurlCommand(req)
+			return cmd.String()
+		},
+	},
+	{
+		name: "adaptor and http2curl",
+		f: func(req *protocol.Request) string {
+			r, _ := adaptor.GetCompatRequest(req)
+			// log curl command
+			cmd, _ := http2curl.GetCurlCommand(r)
+			return cmd.String()
+		},
+	},
+}
+
 var byte2StrFunc = []struct {
 	name string
 	impl func(in []byte) string
@@ -39,48 +61,25 @@ var byte2StrFunc = []struct {
 	},
 }
 
-func BenchmarkHTTP2Curl(b *testing.B) {
+func BenchmarkHertzRequest2Curl(b *testing.B) {
 	for _, v := range bodyLength {
-		b.Run(fmt.Sprintf("body_length_%d", v.input), func(b *testing.B) {
-			// run the Fib function b.N times
-			req := &protocol.Request{}
-			req.SetMethod(consts.MethodPost)
-			body := make([]byte, v.input)
-			rand.Read(body)
-			req.Header.Set(consts.HeaderContentType, "application/json")
-			req.SetBody(body)
-			req.SetRequestURI("https://www.cloudwego.io/zh/")
+		for _, impl := range requestToCurlFunc {
+			b.Run(fmt.Sprintf("body_length_%d_%s", v.input, impl.name), func(b *testing.B) {
+				// run the Fib function b.N times
+				req := &protocol.Request{}
+				req.SetMethod(consts.MethodPost)
+				body := make([]byte, v.input)
+				rand.Read(body)
+				req.Header.Set(consts.HeaderContentType, "application/json")
+				req.SetBody(body)
+				req.SetRequestURI("https://www.cloudwego.io/zh/")
 
-			for i := 0; i < b.N; i++ {
-				r, _ := adaptor.GetCompatRequest(req)
-				// log curl command
-				cmd, _ := http2curl.GetCurlCommand(r)
-				_ = cmd.String()
-			}
-		})
-	}
+				for i := 0; i < b.N; i++ {
+					impl.f(req)
+				}
+			})
+		}
 
-}
-
-func BenchmarkHertzCurl(b *testing.B) {
-
-	for _, v := range bodyLength {
-		b.Run(fmt.Sprintf("body_length_%d_", v.input), func(b *testing.B) {
-			// run the Fib function b.N times
-			req := &protocol.Request{}
-			req.SetMethod(consts.MethodPost)
-			body := make([]byte, v.input)
-			rand.Read(body)
-			req.Header.Set(consts.HeaderContentType, "application/json")
-			req.SetBody(body)
-			req.SetRequestURI("https://www.cloudwego.io/zh/")
-
-			for i := 0; i < b.N; i++ {
-				cmd := GetCurlCommand(req)
-				_ = cmd.String()
-
-			}
-		})
 	}
 
 }
