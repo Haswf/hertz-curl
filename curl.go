@@ -34,7 +34,6 @@ func bashEscape(str string) string {
 
 // GetCurlCommand returns a CurlCommand corresponding to an *protocol.Request
 func GetCurlCommand(req *protocol.Request) (*Command, error) {
-	fmt.Println(req.URI().String())
 	if req.URI().String() == "http:///" {
 		return nil, ErrRequestURINotSet
 	}
